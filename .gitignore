@@ -1,0 +1,5 @@
+*.exe
+a.exe
+.vscode/*
+.vscode
+*.vscode
