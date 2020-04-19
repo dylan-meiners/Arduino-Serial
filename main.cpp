@@ -5,15 +5,40 @@
 
 using namespace std;
 
+/*void RunLEDTest() {
+
+    while (true) {
+        
+        for (int i = 0; i < 128; i++) {
+
+            bytesToWrite[i] = 255;
+            sp.WriteBytes(bytesToWrite, sizeof(bytesToWrite));
+            Sleep(WRITE_SLEEP_TIME);
+        }
+        for (int i = 127; i >= 0; i--) {
+
+            bytesToWrite[i] = 0;
+            sp.WriteBytes(bytesToWrite, sizeof(bytesToWrite));
+            Sleep(WRITE_SLEEP_TIME);
+        }
+    }
+}*/
+
 int main() {
 
     KeyboardLegend keyboard;
     SerialPort sp("COM4", true, true);
-    
-    //72 = 'H', 73 = 'I'
-    unsigned char bytesToWrite[2] = {72, 73};
 
-    cout << sp.WriteBytes(bytesToWrite, sizeof(bytesToWrite)) << endl;
+    unsigned char bytesToWrite[1] = {0};
+    unsigned int buffer[256] = {0};
+    unsigned int singleBuffer = 0;
+
+    while (true) {
+
+        sp.ReadTheLonelyByte(singleBuffer);
+        cout << singleBuffer << endl;
+        sp.WriteBytes(bytesToWrite, 1);
+    }
 
     if(sp.Close()) {
 

@@ -4,6 +4,8 @@
 #include <tchar.h>
 #include <stdio.h>
 
+#define WRITE_SLEEP_TIME 22
+
 class SerialPort {
 
     public:
@@ -52,12 +54,13 @@ class SerialPort {
                 std::cout << "GetCommState failed with error " << GetLastError() << std::endl;
             }
 
-            PrintCommState();
+            //PrintCommState();
             
             m_dcb.BaudRate = CBR_57600;
             m_dcb.ByteSize = 8;
             m_dcb.StopBits = ONESTOPBIT;
             m_dcb.Parity = NOPARITY;
+            m_dcb.EvtChar = 0x04;
             success = SetCommState(m_hComm, &m_dcb);
 
             if (!success) {
@@ -72,6 +75,14 @@ class SerialPort {
             m_timeouts.ReadTotalTimeoutMultiplier = 10;
             m_timeouts.WriteTotalTimeoutConstant = 50;
             m_timeouts.WriteTotalTimeoutMultiplier = 10;
+
+            DWORD dwStoredFlags = EV_RXCHAR;
+            success = SetCommMask(m_hComm, dwStoredFlags);
+
+            if (!success) {
+
+                std::cout << "SetCommMask failed with error " << GetLastError() << std::endl; 
+            }
         }
 
         bool Close() {
@@ -82,19 +93,61 @@ class SerialPort {
         bool WriteBytes(const unsigned char *bytesToWrite, const unsigned int size) {
 
             DWORD numOfBytesToWrite = size;
-            std::cout << numOfBytesToWrite << std::endl;
             DWORD numOfBytesWritten = 0;
 
             return WriteFile(m_hComm, bytesToWrite, numOfBytesToWrite, &numOfBytesWritten, NULL);
         }
 
+        bool ReadTheLonelyByte(unsigned int &p_buffer) {
+
+            bool success = false;
+
+            DWORD dwCommEvent;
+            WaitCommEvent(m_hComm, &dwCommEvent, NULL);
+
+            DWORD noBytesRead;
+            success = ReadFile(m_hComm,
+                               &p_buffer,
+                               1,
+                               &noBytesRead,
+                               NULL);
+            if (!success) { return false; }
+            else { return true; }
+        }
+
+        bool ReadBytes(unsigned int * buffer, const unsigned char bytesToRead) {
+
+            bool success = false;
+
+            DWORD dwCommEvent;
+            WaitCommEvent(m_hComm, &dwCommEvent, NULL);
+
+            char tempChar;
+            DWORD noBytesRead;
+            int i = 0;
+            do {
+                success = ReadFile(m_hComm,
+                                   &tempChar,
+                                   sizeof(tempChar),
+                                   &noBytesRead,
+                                   NULL);
+                if (!success) { return false; }
+
+                buffer[i] = tempChar;
+                i++;
+            } while (i < bytesToRead);
+            
+            return true;
+        }
+
         void PrintCommState() {
 
-            _tprintf(TEXT("\nBaudRate = %d\nByteSize = %d\nParity = %d\nStopBits = %d\n\n"),
+            _tprintf(TEXT("\nBaudRate = %d\nByteSize = %d\nParity = %d\nStopBits = %d\nEventChar = %d\n\n"),
                      m_dcb.BaudRate,
                      m_dcb.ByteSize,
                      m_dcb.Parity,
-                     m_dcb.StopBits);
+                     m_dcb.StopBits,
+                     m_dcb.EvtChar);
         }
 
     private:
